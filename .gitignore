@@ -1,0 +1,144 @@
+from sklearn.ensemble import RandomForestRegressor, ExtraTreesRegressor, GradientBoostingRegressor
+from sklearn import svm
+from sklearn.linear_model import LinearRegression
+import xgboost as xgb
+from sklearn import decomposition
+from collections import defaultdict
+import numpy as np
+import pandas as pd
+from sklearn.cross_validation import StratifiedKFold
+from sklearn import ensemble, preprocessing, grid_search, cross_validation
+import math
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.feature_extraction import DictVectorizer
+from sklearn import metrics
+import math
+
+if __name__ == '__main__':
+    
+    # load training and test datasets
+    train = pd.read_csv('../analytics vidya/train.csv')#, nrows = 10000)
+    test =  pd.read_csv('../analytics vidya/test.csv')#, nrows = 1000)
+    
+    
+    labels = train.Purchase.values
+    log_labels = np.log1p(labels)
+    
+    
+    ID = test.User_ID.values
+    
+    p_id = test['Product_ID'].values
+    P_id= p_id
+    train.loc[train.Stay_In_Current_City_Years == '4+','Stay_In_Current_City_Years'] = 4
+    train['Stay_In_Current_City_Years'] =    train.Stay_In_Current_City_Years.astype(int)
+    
+    test.loc[test.Stay_In_Current_City_Years == '4+','Stay_In_Current_City_Years'] = 4
+    test['Stay_In_Current_City_Years'] =    test.Stay_In_Current_City_Years.astype(int)  
+    
+    
+       
+    
+    
+    
+    
+    
+    for i in np.unique(train.Age.values):
+        if i == 4:
+            train.loc[train.Age == i , 'Age'] = 30
+            test.loc[test.Age == i ,'Age'] = 30
+        if i == '0-17':
+            train.loc[train.Age == i , 'Age'] = 12
+            test.loc[test.Age == i ,'Age'] = 12
+        if i == '18-25':
+            train.loc[train.Age == i , 'Age'] = 22
+            test.loc[test.Age == i ,'Age'] = 22
+        if i == '26-35':
+            train.loc[train.Age == i , 'Age'] = 30
+            test.loc[test.Age == i ,'Age'] = 30
+
+        if i == '36-45':
+            train.loc[train.Age == i , 'Age'] = 40
+            test.loc[test.Age == i ,'Age'] = 40
+        if i == '46-50':
+            train.loc[train.Age == i , 'Age'] =  47
+            test.loc[test.Age == i ,'Age'] = 47
+        if i == '51-55':
+            train.loc[train.Age == i , 'Age'] = 53
+            test.loc[test.Age == i ,'Age'] = 53
+        if i == '55+':
+            train.loc[train.Age == i , 'Age'] =  58
+            test.loc[test.Age == i ,'Age'] = 58
+    
+    
+    train.Age = train.Age.astype(int)
+    test.Age = test.Age.astype(int)
+    
+    #train.loc[pd.notnull(train.Product_Category_1) & pd.notnull(train.Product_Category_2) & pd.notnull(train.Product_Category_3),'how_many_cat'] = 3
+    
+    
+    
+    
+    
+    text_columns = []
+    for f in train.columns:
+        if train[f].dtype=='object':
+            print f
+            text_columns.append(f)            
+            lbl = preprocessing.LabelEncoder()
+            lbl.fit(list(train[f].values) + list(test[f].values))
+            train[f] = lbl.transform(list(train[f].values))
+            test[f] = lbl.transform(list(test[f].values))
+    
+    print p_id,'as'
+    
+    train = train.drop('Purchase' ,axis = 1 )
+    k = train.columns
+    
+    train = train.replace(np.nan , 0)
+    test = test.replace(np.nan, 0)
+    train = np.array(train)
+    test = np.array(test)
+    train = train.astype(float)
+    test1= test.astype(float)
+    
+    
+    print 'every thing is done'
+    
+    params = [{'n_estimators': [1000], 'min_samples_split': [25,20],'max_depth': [4,6], \
+    'learning_rate':[.05,0.06,0.65] }  ]
+              
+              
+    gbm = ensemble.GradientBoostingRegressor(random_state=42, min_samples_split = 30, max_depth = 10, learning_rate = 0.05,  max_features = 'sqrt',n_estimators = 1500)
+    print 'kk'
+
+   
+    
+    gbm.fit(train , log_labels)
+    pred = np.expm1(gbm.predict(test))
+    
+    
+    gbm1 = ensemble.GradientBoostingRegressor(random_state=42, min_samples_split = 30, max_depth = 8, learning_rate = 0.05,  max_features = 'sqrt',n_estimators = 1500)
+    print 'kk'
+
+   
+    print '1st' 
+    gbm1.fit(train , log_labels)
+    pred1 = np.expm1(gbm1.predict(test))    
+    
+    
+    gbm2 = ensemble.GradientBoostingRegressor(random_state=42, min_samples_split = 30, max_depth = 12, learning_rate = 0.05,  max_features = 'sqrt',n_estimators = 1500)
+    print 'kk'
+
+    print '2nd' 
+    
+    gbm2.fit(train , log_labels)
+    pred2 = np.expm1(gbm2.predict(test))   
+    
+    
+
+    submission = pd.DataFrame({"User_ID":ID,'Product_ID': p_id , "Purchase": (pred+pred1+pred2)/3.0})
+    submission= submission[['User_ID','Product_ID', 'Purchase']]
+    submission.to_csv('f_user_id.csv', index = False)         
+              
+              
+    
